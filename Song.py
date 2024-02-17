@@ -103,6 +103,7 @@
 #
 # Copyright (c) 2023 Bucknell University. All rights reserved.
 
+from msilib.schema import IniFile
 from typing import TextIO, List, Dict
 from Wave import *
 from AudioProcessor import *
@@ -152,75 +153,103 @@ class Song(BaseWave):
         
         @param in_file The input file stream.
         """
-        
-        pass
+        line = in_file.readline()  # Read a line from the file
+        return int(line.strip())  # Convert the line to an integer and return it
                 
     def _read_instrument_info(self, in_file: TextIO, instrument_info: List[Dict]) -> None:
-        """! A helper method to read the instrument information form in_file and store it to instrument_info.
-        
-        The input **instrument_info** is expected to be a list of dict that represents a list of instrument information. The length of **instrument_info** is the total number of instruments. For each instrument, this method reads a line from **in_file** and splits the read line into values. It assigns and recasts the corresponding values into the dict.
-        
-        @param in_file The input file stream.
-        
-        @param instrument_info The output instrument information, which is a list of dict.
-        """
-        
-        pass
+        """! Reads instrument information from the given file and stores it in a list of dictionaries.
+
+         Each line in the file represents an instrument's properties, which are read and stored as a dictionary at the corresponding index in the instrument_info list.
+
+         @param in_file: The input file stream containing instrument data.
+         @param instrument_info: The pre-sized list to be populated with instrument information dictionaries.
+         """
+      
+        num_of_instruments = int(in_file.readline().strip())
+        instrument_info = Array(num_of_instruments)
+        for i in range(num_of_instruments):
+           line = in_file.readline().strip()
+           values = line.split()
+           instrument_dict = {
+            'wave_type': int(values[0]),
+            'envelope_type': int(values[1]),
+            'amplitude': float(values[2]),
+            'pan_angle': float(values[3])
+           }
+        # Directly set the instrument information in the Array
+           instrument_info[i] = instrument_dict
+
+
                 
     def _generate_instrument_note_wave(self, wave_type: int, num_samples: int, freq: float, amp: float) -> BaseWave:
-        """! A helper method to generate an instrument note sound wave based on the input wave_type, num_samples, freq, and amp.
-        
-        This method uses Wave.SineWave, Wave.SquareWave, Wave.SawtoothWave, Wave.ComplexWave, or Wave.StringWave creates a sound wave and returns it. The input **wave_type** determines which class to use to generate the sound wave. All other input parameters are relayed to the Wave class for wave generation. 
-        
-        @param wave_type The wave type. 1: sine, 2: square, 3: sawtooth, 4: complex, 5: string
-        
-        @param num_samples The number of samples.
-        
-        @param freq The wave frequency.
-        
-        @param amp The wave amplitude.
-        
-        @return A sound wave.
-        """
-        
-        pass
+           if wave_type == 1:
+             return SineWave(num_samples, freq, amp)
+           elif wave_type == 2:
+             return SquareWave(num_samples, freq, amp)
+           elif wave_type == 3:
+             return SawtoothWave(num_samples, freq, amp)
+           elif wave_type == 4:
+             return ComplexWave(num_samples, freq, amp)
+           elif wave_type == 5:
+             return StringWave(num_samples, freq, amp)
+           else:
+             raise ValueError("Unknown wave type")
+         
         
     def _read_instrument_audio_data(self, in_file: TextIO, instrument_info: List[Dict], audio_data: List[Array], audio_num_samples: List[Array]):
-        """! A helper method to read the instrument audio data from in_file and store it to audio_data.
-        
-        This method reads **in_file** line by line until the end. Each line represents a note of an instrument. After splitting the line into values, this method should obtain the instrument index (telling us which instrument the note belongs to), the note number (which can be converted to frequency using audio_note_number_to_freq()), the note amplitude, the starting and ending sample indices. Using this information, this method calls _generate_instrument_note_wave() to create the note sound wave, then applies the envelope, and at last accumulates the samples in **audio_data** (using the instrument index, the starting and ending sample indices). This method also increases the number of sample counters **audio_num_samples** whenever it accumulates a sound sample to **audio_data**.
-        
-        @param in_file The input file stream.
-        
-        @param instrument_info The instrument information.
-        
-        @param audio_data The instrument audio data.
-        
-        @param audio_num_samples The number of samples of each instrument audio data.
-        """
-        
-        pass
+        num_notes = int(in_file.readline().strip())  # Assuming the number of notes is specified in the file
+
+        for _ in range(num_notes):
+           line = in_file.readline().strip()
+           values = line.split()
+           instrument_index = int(values[0])
+           note_number = int(values[1])
+           note_amplitude = float(values[2])
+           note_start = int(values[3])
+           note_end = int(values[4])
+
+        # Convert the note number to frequency
+           frequency = self.audio_note_number_to_freq(note_number)
+
+        # Generate the note's wave using the specified instrument's wave type and envelope
+           wave_type = instrument_info[instrument_index]['wave_type']
+           envelope_type = instrument_info[instrument_index]['envelope_type']
+           wave_amp = instrument_info[instrument_index]['amplitude']
+
+        # Create an Array for the note's audio data with the appropriate size
+           note_audio_data = Array(note_end - note_start + 1)
+
+        # Generate the wave and apply the envelope (pseudo-code, these functions need to be implemented)
+           self._generate_wave(note_audio_data, frequency, wave_amp, wave_type)
+           self._apply_envelope(note_audio_data, envelope_type)
+
+        # Mix the note into the main audio data array
+        for i in range(note_start, note_end + 1):
+            audio_data[instrument_index][i] += note_audio_data[i - note_start]
+            audio_num_samples[instrument_index] += 1
                 
     def _average_audio_data_samples(self, audio_data: List[Array], audio_num_samples: List[Array]):
-        """! A helper method to compute the average of the audio data by dividing the input audio data by the total number of samples.
+        for instrument_index in range(len(audio_data)):
+          for sample_index in range(len(audio_data[instrument_index])):
+            if audio_num_samples[instrument_index] > 0:
+                audio_data[instrument_index][sample_index] /= audio_num_samples[instrument_index]
         
-        This method computes the average sample values. Note that **audio_data** stores the accumulated sample values while **audio_num_samples** stores the total number of samples. To compute the average values, this method loops each instrument and loops each sample data in **audio_data**, then divides the sample value by the total number of samples. Note that this method only divides the sample value by the total number of samples when the total number of samples is not zero.
-        
-        @param audio_data The instrument audio data.
-        
-        @param audio_num_samples The number of samples of each instrument audio data.
-        """
-        
-        pass
         
     def _mix_instrument_audio_in_song(self, instrument_info: List[Dict], audio_data: List[Array]):
-        """! A helper method to mix the instrument audio data into a stereo sound.
-        
-        For each instrument (i.e., looping **audio_data**), it uses the pan angle (stored in **instrument_info**) and audio_stereo_gains() to compute the left and right channel gains. Then, it multiples the gains by the instrument amplitude (also stored in **instrument_info**), calls audio_multiply_gain() to apply the gain to the instrument's audio data and calls audio_stereo_mix_in() to mix the instrument's audio data into the song's audio data (i.e., **self._data**).
-        
-        @param instrument_info The instrument information.
-        
-        @param audio_data The instrument audio data.
-        """
-        
-        pass
+        for i in range(len(instrument_info)):
+        # Extract the instrument's information
+            info = instrument_info[i]
+            pan_angle = info['pan_angle']
+            amplitude = info['amplitude']
+
+        #Calculate the left and right gains based on the pan angle
+            left_gain, right_gain = audio_stereo_gains(pan_angle)
+
+        # Apply the gain to the instrument's audio data
+            audio_multiply_gain(audio_data[i], amplitude * left_gain)
+            audio_multiply_gain(audio_data[i], amplitude * right_gain)
+
+        # Mix the instrument's audio data into the song's stereo audio data
+        # Note: Assuming self._data is an Array with appropriate size
+            audio_stereo_mix_in(self._data, audio_data[i], 0)  # For left channel
+            audio_stereo_mix_in(self._data, audio_data[i], 1)  # For right channel

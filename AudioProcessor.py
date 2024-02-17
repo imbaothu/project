@@ -1,7 +1,6 @@
 """! @brief The AudioProcessor package.
 """
 
-##
 # @file AudioProcessor.py
 #
 # @brief This package provides the audio processing functions.
@@ -65,7 +64,6 @@
 from typing import Tuple
 from math import sqrt, pi, sin, cos, exp, floor
 from DataStructure import Array
-
 ## The number of attack samples
 adsr_attack_samples = 882
 ## The number of decay samples
@@ -73,251 +71,181 @@ adsr_decay_samples = 882
 ## The number of release samples
 adsr_release_samples = 882
 
-def audio_generate_sine_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int) -> None:
-    """! This function generates a sine wave audio data.
-    
-    Given an input frequency **freq** and an amplitude **amp**, this function samples the continuous sine function \f(\sin\f) to the input Array **audio_data**. The sampling rate is determined by the input samples per second **samples_per_sec**. For each sample in **audio_data** (denote it as the **i**-th sample), this function first computes the current time **t** (dividing **i** by **samples_per_sec**). Then, it computes the current angle **theta** (multiplying **t** by **freq** and \f(2\pi\f)). At last, it sets the **i**-th sample **audio_data[i]** to \f(\sin\f)(**theta**) * **amp**.
-    
-    @param audio_data The audio data.
-    
-    @param freq The sine wave frequency.
-    
-    @param amp The sine wave amplitude.
-    
-    @param samples_per_sec The number of samples per second.
+def audio_generate_sine_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int):
     """
-    for i in range(len(audio_data)):
-        t = i / samples_per_sec
-        audio_data[i] = amp * sin(2 * pi * freq * t)
+    Generates a sine wave based on the specified frequency, amplitude, and sampling rate.
 
-    
-    
-
-def audio_generate_square_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int) -> None:
-    """! This function generates a square wave audio data.
-    
-    Given an input frequency **freq** and an amplitude **amp**, this function samples the continuous square function \f(\mathrm{square}\f) to the input Array **audio_data**. The sampling rate is determined by the input samples per second **samples_per_sec**. For each sample in **audio_data** (denote it as the **i**-th sample), this function first computes the current time **t** (dividing **i** by **samples_per_sec**). Then, it computes the current angle **theta** (multiplying **t** by **freq** and \f(2\pi\f)). At last, it sets the **i**-th sample **audio_data[i]** to \f(\mathrm{square}\f)(**theta**) * **amp**. Note that, one can compute \f(\mathrm{square}\f)(**theta**) using \f(\sin\f)(**theta**) as follows:
-        \f(
-        \mathrm{square}(\theta) = \begin{cases}
-            1 & \text{if } \sin(\theta) \geq 0 \\
-            -1 & \text{otherwise.}
-        \end{cases}
-        \f)
-    
-    @param audio_data The audio data.
-    
-    @param freq The square wave frequency.
-    
-    @param amp The square wave amplitude.
-    
-    @param samples_per_sec The number of samples per second.
+    Parameters:
+    - audio_data: Array to store the generated sine wave samples.
+    - freq: Frequency of the sine wave in Hz.
+    - amp: Amplitude of the sine wave, where 1.0 is maximum amplitude.
+    - samples_per_sec: Sampling rate in samples per second (should be 44100 for CD quality).
     """
-    for i in range(len(audio_data)):
-        t = i / samples_per_sec
-        audio_data[i] = amp if sin(2 * pi * freq * t) >= 0 else -amp
-
-def audio_generate_sawtooth_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int) -> None:
-    """! This function generates a sawtooth wave audio data.
-    
-    Given an input frequency **freq** and an amplitude **amp**, this function samples the continuous sawtooth function \f(\mathrm{sawtooth}\f) to the input Array **audio_data**. The sampling rate is determined by the input samples per second **samples_per_sec**. For each sample in **audio_data** (denote it as the **i**-th sample), this function first computes the current time **t** (dividing **i** by **samples_per_sec**). Then, it computes the current cycle **num_cycles** (multiplying **t** by **freq**) and the current sampling position **sample_pos** (the decimal part of **num_cycles**). At last, it sets the **i**-th sample **audio_data[i]** to \f(\mathrm{sawtooth}\f)(**sample_pos**) * **amp**. Note that, one can compute \f(\mathrm{sawtooth}\f)(**sample_pos**) as follows:
-        \f(
-        \mathrm{sawtooth}(p) = -1 + 2p
-        \f)
-    
-    @param audio_data The audio data.
-    
-    @param freq The sawtooth wave frequency.
-    
-    @param amp The sawtooth wave amplitude.
-    
-    @param samples_per_sec The number of samples per second.
-    """
-    
-    for i in range(len(audio_data)):
-        t = i / samples_per_sec
-        sample_pos = (t * freq) - floor(t * freq)
-        audio_data[i] = amp * (-1 + 2 * sample_pos)
-
-def audio_generate_complex_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int) -> None:
-    """! This function generates a complex wave audio data.
-    
-    Given an input frequency **freq** and an amplitude **amp**, this function samples the continuous complex sine wave function \f(\mathrm{complex}\f) to the input Array **audio_data**. The sampling rate is determined by the input samples per second **samples_per_sec**. For each sample in **audio_data** (denote it as the **i**-th sample), this function first computes the current time **t** (dividing **i** by **samples_per_sec**). Then, it computes the current angle **theta** (multiplying **t** by **freq** and \f(2\pi\f)). At last, it sets the **i**-th sample **audio_data[i]** to \f(\mathrm{complex}\f)(**theta**) * **amp**. In this project, we define the \f(\mathrm{complex}\f)(**theta**) using \f(\mathrm{\sin}\f)(**theta**) as follows:
-        \f(
-        \mathrm{complex}(\theta) = \frac{\mathrm{sinwave}(\theta)}{\max(|\mathrm{sinwave}|)}
-        \f)
-    where \f(\mathrm{sinwave}\f)(**theta**) is defined as:
-        \f(
-        \mathrm{sinwave}(\theta) = \left( (\sin(\theta) + \frac{1}{2}\sin(2\theta) + \frac{1}{4}\sin(3\theta) + \frac{1}{8}\sin(4\theta) + \frac{1}{16}\sin(5\theta) + \frac{1}{32}\sin(6\theta)) \times \exp(-0.0004\theta)\right)^3
-        \f)
-    and \f(\max(|\mathrm{sinwave}|)\f) is the maximum of the absolute value of all \f(\mathrm{sinwave}(\theta)\f).
-    
-    @param audio_data The audio data.
-    
-    @param freq The complex wave frequency.
-    
-    @param amp The complex wave amplitude.
-    
-    @param samples_per_sec The number of samples per second.
-    """
-    
-    def sinwave(theta: float) -> float:
-        components = sum((1/2**i) * sin((i+1) * theta) for i in range(6))
-        decay = exp(-0.0004 * theta)
-        return (components * decay) ** 3
-
-    max_sinwave = max(abs(sinwave(2 * pi * freq * t / samples_per_sec)) for t in range(samples_per_sec))
-    
     for i in range(len(audio_data)):
         t = i / samples_per_sec
         theta = 2 * pi * freq * t
-        audio_data[i] = amp * (sinwave(theta) / max_sinwave)
+        audio_data[i] = amp * sin(theta)
 
-def audio_generate_string_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int) -> None:
-    """! This function generates a string wave audio data.
-    
-    Given an input frequency **freq** and an amplitude **amp**, this function samples the continuous string function \f(\mathrm{string}\f), using the Karplus-Strong algorithm (https://en.wikipedia.org/wiki/Karplus%E2%80%93Strong_string_synthesis), to the input Array **audio_data**. The sampling rate is determined by the input samples per second **samples_per_sec**. In a word, the Karplus-Strong algorithm continuously and repeatedly averages consecutive random wave samples into the output string samples. In this project, this function implements a modified version of the Karplus-Strong algorithm as follows:
-    
-    - First, instead of using random samples, the function initializes an Array **wave_samples** of size **samples_per_sec** / **freq**, and calls audio_generate_square_wave() to create **wave_samples**.
-    - Then, initialize **prev_idx** to the last index of the wave samples and **cur_idx** to 0.
-    - For each sample in **audio_data** (denote it as the **i**-th sample), 
-      - set the current audio sample (**audio_data[i]**) to the average of the wave samples (**wave_samples**) at **prev_idx** and **cur_idx**.
-      - set the wave samples at **cur_idx** to **audio_data[i]**.
-      - set **prev_idx** to **cur_idx**.
-      - advance **cur_idx** by 1. If it is out of bounds, reset it to 0. Hint: You may handle the out-of-bound situation by using the modulo operator.
-    
-    @param audio_data The audio data.
-    
-    @param freq The string wave frequency.
-    
-    @param amp The string wave amplitude.
-    
-    @param samples_per_sec The number of samples per second.
+def audio_generate_square_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int):
     """
-    
-    size = int(samples_per_sec / freq)
-    wave_samples = [0.0] * size
-    
-    audio_generate_square_wave(wave_samples, freq, amp, samples_per_sec)
-    
-    prev_idx = size - 1
-    curIdx = 0
-    
+    Generates a square wave based on the specified frequency, amplitude, and sampling rate.
+
+    Parameters:
+    - audio_data: Array where the generated square wave samples will be stored.
+    - freq: The frequency of the square wave in Hz.
+    - amp: The amplitude of the square wave. This value should oscillate between -amp and amp.
+    - samples_per_sec: The sampling rate in samples per second.
+    """
+    num_samples = len(audio_data)  # Determine the number of samples based on the audio_data array length
+
+    for i in range(num_samples):
+        # Calculate the time in seconds for the current sample
+        t = i / samples_per_sec
+
+        # Set the sample value to amp if sin(2pitf) >= 0 , else -amp
+        if sin(2*pi*t*freq) >= 0:
+            audio_data[i] = amp  # Positive half of the square wave
+        else:
+            audio_data[i] = -amp  # Negative half of the square wave
+        
+def audio_generate_sawtooth_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int):
+    """
+        Generates a sawtooth wave based on the specified frequency, amplitude, and sampling rate.
+
+        Parameters:
+        - audio_data: Array where the generated sawtooth wave samples will be stored.
+        - freq: The frequency of the sawtooth wave in Hz.
+        - amp: The amplitude of the sawtooth wave.
+        - samples_per_sec: The sampling rate in samples per second.
+
+        The function modifies the audio_data array in place, filling it with the generated sawtooth wave samples.
+        """
+    # Iterate through each sample to be generated
     for i in range(len(audio_data)):
-        audio_data[i] = (wave_samples[prev_idx] + wave_samples[curIdx]) / 2
-        
-        wave_samples[curIdx] = audio_data[i]
-        
-        prev_idx = curIdx
-        curIdx = (curIdx + 1) % size
+        # Calculate the time in seconds for the current sample
+        t = i / samples_per_sec
+        # Determine how many complete cycles have occurred by this time
+        num_cycles = t * freq
+        # Calculate the position within the current cycle as a fraction between 0 and 1
+        sample_pos = num_cycles - int(num_cycles)  # Keep only the fractional part
 
+        # Calculate the sawtooth wave value for this position in the cycle
+        # The formula (2 * sample_pos - 1) maps the range [0,1] to [-1,1]
+        # Multiply by amplitude to scale the wave to the desired amplitude
+        audio_data[i] = (2 * sample_pos - 1) * amp
+          
+def sinwave(theta):
+    # Implementation of the sinwave function goes here.
+    return sin(theta)
 
-def audio_note_number_to_freq(note_number: int) -> float:
-    """! This function converts the song note number to wave frequency.
-    
-    Musical note numbers can be converted to their corresponding wave frequencies (Ref: https://www.inspiredacoustics.com/en/MIDI_note_numbers_and_center_frequencies). In short, given a note number **note_number** (denote by \f(n\f)), this function returns the corresponding wave frequency using this formula: \f(440 \times 2^{\frac{n - 69}{12}}\f).
-    
-    @param note_number The input note number.
-    
-    @return The converted wave frequency.
+def audio_generate_complex_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int):
+    # Calculate the number of samples needed
+    num_samples = len(audio_data)
+
+    # Create a temporary array to store the complex wave before normalization
+    temp_wave = Array(num_samples)
+
+    # Calculate the sinwave values and store them in temp_wave
+    for i in range(num_samples):
+        t = i / samples_per_sec  # Calculate the time for the current sample
+        # Sum of sine waves for different harmonics with exponential decay
+        sinwave = sum(sin(2 * j * pi * t * freq) * exp(-0.0008 * pi * t * freq) / 2 ** (j - 1)
+                      for j in range(1, 7))
+        # Cube the sinwave value and store it in temp_wave
+        temp_wave[i] = sinwave ** 3
+
+    # Find the maximum absolute value in the temp_wave for normalization
+    max_sinwave = max(abs(sample) for sample in temp_wave)
+
+    # Normalize and store the values in the audio_data array, scaling with the amplitude
+    for i in range(num_samples):
+        audio_data[i] = (temp_wave[i] / max_sinwave) * amp
+
+def audio_generate_string_wave(audio_data: Array, freq: float, amp: float, samples_per_sec: int):
     """
-    
-    pass
+        Generates a string wave using a modified version of the Karplus-Strong algorithm.
 
+        Parameters:
+        - audio_data: Array to store the generated string wave samples.
+        - freq: The frequency of the note to simulate.
+        - amp: The amplitude of the string wave.
+        - samples_per_sec: The sampling rate in samples per second.
+        """
+    # Calculate the size of wave_samples which is based on the desired frequency
+    size_wave_samples = int(samples_per_sec / freq)
 
+    # Initialize wave_samples using the audio_generate_square_wave function with an increased frequency
+    wave_samples = Array(size_wave_samples)
+    audio_generate_square_wave(wave_samples, freq * 100, amp, samples_per_sec)
+
+    # Initialize prev_idx to the last index of the wave_samples
+    prev_idx = size_wave_samples - 1
+    # Initialize cur_idx to 0
+    cur_idx = 0
+
+    # Loop through the audio_data array to fill it with the string wave samples
+    for i in range(len(audio_data)):
+        # Set the current audio sample to the average of the wave_samples at prev_idx and cur_idx
+        audio_data[i] = (wave_samples[prev_idx] + wave_samples[cur_idx]) / 2
+        # Set the wave_samples at cur_idx to the new audio_data[i]
+        wave_samples[cur_idx] = audio_data[i]
+        # Set prev_idx to cur_idx
+        prev_idx = cur_idx
+        # Advance cur_idx by 1 and wrap it using modulo to stay within the bounds of wave_samples
+        cur_idx = (cur_idx + 1) % size_wave_samples
+
+def audio_note_number_to_freq(note_number:int)->float:
+    return 440 * (2 ** ((note_number - 69) / 12))
 
 def audio_stereo_gains(angle: float) -> Tuple[float, float]:
-    """! This function takes the angle between two stereo sources, computes and returns the two channel gains.
-    
-    This function computes appropriate gains for the stereo left and right channels, according to a pan angle **angle** specified in radians. It returns a tuple of two gains using the below formula. Given an angle \f(\theta\f), the left \f(L\f) and right \f(R\f) gains are: \f(L = \frac{\sqrt{2}}{2} (\cos(\theta) + \sin(\theta))\f) and \f(R = \frac{\sqrt{2}}{2} (\cos(\theta) - \sin(\theta))\f).
-    
-    @param angle The pan angle between the two stereo sources.
-    
-    @return A tuple of the left and right channel gains.
-    """
-    # Using half the square root of two as a multiplier for both channels
-    root_two_half = sqrt(2) / 2
-    # Compute the left and right gains using trigonometric functions
-    gain_left = root_two_half * (cos(angle) + sin(angle))
-    gain_right = root_two_half * (cos(angle) - sin(angle))
-    
-    return gain_left, gain_right
+    left_gain = (sqrt(2) / 2) * (cos(angle) + sin(angle))
+    right_gain = (sqrt(2) / 2) * (cos(angle) - sin(angle))
+    return left_gain, right_gain
 
-
-    
-    
-
-
-def audio_multiply_gain(audio_data: Array, gain: float) -> None:
-    """! This function multiplies the audio data by the input gain.
-    
-    This function multiples the input Array **audio_data** by the input **gain**. For each sample in **audio_data**, it is multiplied by **gain**.
-    
-    @param audio_data The audio data.
-    @param gain The input gain.
-    """
+def audio_multiply_gain(audio_data: Array, gain: float):
     for i in range(len(audio_data)):
         audio_data[i] *= gain
 
-    
-    
-
-def audio_rise_fall_envelope(audio_data: Array) -> None:
-      """Apply a simple rise/fall envelope to the audio data."""
-      m = len(audio_data) // 2
-      for i in range(len(audio_data)):
-        if i <= m:  # Rise phase
-            gain = i / m
-        else:  # Fall phase
-            gain = (len(audio_data) - 1 - i) / (len(audio_data) - 1 - m)
-        audio_data[i] *= gain
-
-
-def audio_adsr_envelope(audio_data: Array) -> None:
-    """Applies the ADSR envelope to the input audio data.
-
-    Args:
-        audio_data: The audio data as an Array of floats.
-    """
-    total_length = len(audio_data)  # This requires your Array class to support len()
-    
-    total_adsr_samples = adsr_attack_samples + adsr_decay_samples + adsr_release_samples
-
-    if total_length < total_adsr_samples:
-        # If not enough samples for ADSR, apply rise/fall envelope
-        audio_rise_fall_envelope(audio_data)
-        return
-
-    for i in range(total_length):
-        if i < adsr_attack_samples:
-            # Attack phase: gain increases from 0.0 to 1.2
-            gain = 1.2 * i / adsr_attack_samples
-        elif i < adsr_attack_samples + adsr_decay_samples:
-            # Decay phase: gain decreases from 1.2 to 1.0
-            # Correct the formula to accurately reflect the decrease
-            gain = 1.2 - (0.2 * (i - adsr_attack_samples) / adsr_decay_samples)
-        elif i < total_length - adsr_release_samples:
-            # Sustain phase: gain remains at 1.0
-            gain = 1.0
+def audio_rise_fall_envelope(audio_data: Array):
+    middle_sample_index = len(audio_data) // 2  # Index of the middle sample
+    for i in range(len(audio_data)):
+        if i <= middle_sample_index:
+            gain = i / middle_sample_index
         else:
-            # Release phase: gain decreases from 1.0 to 0.0
-            # Ensure the release phase gain calculation correctly scales down to 0
-            gain = (total_length - i) / adsr_release_samples
+            gain = (len(audio_data) - 1 - i) / (len(audio_data) - 1 - middle_sample_index)
         audio_data[i] *= gain
 
+def audio_adsr_envelope(audio_data: Array):
 
-def audio_stereo_mix_in(stereo_data: Array, channel_data: Array, which_channel: int) -> None:
-    """! This function mixes in an audio channel to the stereo audio data.
-    
-    This function first checks if the number of stereo audio samples (**stereo_data**) is twice the number of input channel data (**channel_data**). If not, it raises an exception. Otherwise, for each sample in **channel_data** (denote it as the **i**-th sample), using the input **which_channel**, this function mixes **channel_data[i]** into **stereo_data** at the position **i** * 2 + **which_channel**, where **which_channel** equal to 0 is the left channel, and 1 is the right channel. When mixing it in, it adds a new value to the existing value.
-    
-    @param stereo_data The stereo audio data.
-    @param channel_data The mono channel audio data to mix in.
-    @param which_channel The channel to mix in.
-    """
-    # Check the length requirement
-    if len(stereo_data) != len(channel_data) * 2:
-        raise ValueError("Stereo track length must be twice the length of mono track.")
-    
-    # Mix in the channel data to the specified channel
+    adsr_attack_samples = 882  # Example value for attack samples
+    adsr_decay_samples = 882  # Example value for decay samples
+    adsr_release_samples = 882  # Example value for release samples
+    gain = 1
+
+    if len(audio_data) < adsr_attack_samples + adsr_decay_samples + adsr_release_samples:
+        audio_rise_fall_envelope(audio_data)
+    else:
+        for i in range(len(audio_data)):
+            if i < adsr_attack_samples:
+                gain = 1.2 * i / adsr_attack_samples
+            elif adsr_attack_samples <= i < adsr_attack_samples + adsr_decay_samples:
+                gain = 1 + 0.2 * (adsr_attack_samples + adsr_decay_samples - i)/ adsr_decay_samples
+            elif adsr_attack_samples + adsr_decay_samples <= i < len(audio_data) - adsr_release_samples:
+                gain = 1
+            elif len(audio_data) - adsr_release_samples <= i < len(audio_data):
+                gain = (len(audio_data) - 1 - i) / adsr_release_samples
+            else:
+                print("Error")
+            audio_data[i] *= gain
+
+def audio_stereo_mix_in(stereo_data: Array, channel_data: Array, which_channel: int):
+    if len(stereo_data) != 2 * len(channel_data):
+        raise ValueError("Number of stereo audio samples must be twice the number of input channel data")
+
     for i in range(len(channel_data)):
-        stereo_data[i * 2 + which_channel] += channel_data[i]
+        if which_channel == 0:  # Left channel
+            stereo_data[i * 2] += channel_data[i]
+        elif which_channel == 1:  # Right channel
+            stereo_data[i * 2 + 1] += channel_data[i]
+        else:
+            raise ValueError("Invalid channel number. Use 0 for left channel or 1 for right channel")
